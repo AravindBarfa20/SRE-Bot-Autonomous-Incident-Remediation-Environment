@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 from pydantic import BaseModel
 
 class ActionType(Enum):
@@ -15,11 +15,19 @@ class Action(BaseModel):
     target: str  # e.g., "auth-service", "api-gateway", "db-proxy"
     rationale: Optional[str] = None
 
+
+class NodeMetrics(BaseModel):
+    cpu: float
+    ram: float
+    latency: float
+
+
 class Observation(BaseModel):
     system_health: float  # 0.0 to 100.0
     active_alerts: List[str]
     logs: str
-    metrics: Dict[str, float]
+    metrics: Dict[str, NodeMetrics]
+    available_actions: List[str]
     last_action_feedback: str
 
 class State(BaseModel):
