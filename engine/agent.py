@@ -18,6 +18,16 @@ class HuggingFaceAgentError(RuntimeError):
     pass
 
 
+def _json_default(value: Any):
+    if hasattr(value, "model_dump"):
+        return value.model_dump()
+    if hasattr(value, "dict"):
+        return value.dict()
+    if hasattr(value, "__dict__"):
+        return value.__dict__
+    return value
+
+
 class HuggingFaceSREAgent:
     def __init__(self, token: Optional[str] = None, model_id: str = HF_MODEL_ID):
         self.token = token or os.getenv("HF_TOKEN")
@@ -95,6 +105,7 @@ class HuggingFaceSREAgent:
     def _build_prompt(self, observation: Observation, step: int) -> str:
         valid_action_types = ", ".join(action.value for action in ActionType)
         valid_targets = ", ".join(VALID_TARGETS)
+        json_default = _json_default
         return f"""
 You are SRE-Bot, an incident remediation agent operating in a production-grade RL environment.
 You must inspect the current observation and choose exactly one next action.
@@ -113,8 +124,9 @@ Rules:
 
 Observation step: {step}
 System health score: {observation.system_health}
-Active alerts: {json.dumps(observation.active_alerts)}
-Metrics: {json.dumps(observation.metrics)}
+Active alerts: {json.dumps(observation.active_alerts, default=json_default)}
+Available actions: {json.dumps(observation.available_actions, default=json_default)}
+Metrics: {json.dumps(observation.metrics, default=json_default)}
 Last action feedback: {observation.last_action_feedback}
 Recent logs:
 {observation.logs}
