@@ -24,6 +24,10 @@ Production-grade incident remediation RL environment for observability-driven fa
 
 The design goal is straightforward: turn incident handling into a repeatable loop with strong Observability, explicit action selection, and Deterministic Scoring. The environment emits logs, metrics, and action feedback as structured observations. The agent reasons over that state, selects from a constrained remediation action space, and continues until the fault is resolved or the step budget is exhausted.
 
+🌍 Live Dashboard (Vercel): https://sre-bot-autonomous-incident-remedia-five.vercel.app
+
+🧠 Backend API / Swagger (Hugging Face Spaces): https://aravind20-sre-bot-engine.hf.space/docs
+
 ## Quick Glance
 
 | Layer | Technology | Role |
@@ -64,6 +68,12 @@ flowchart LR
 - Deterministic Scoring path for repeatable evaluation of agent performance across incident runs.
 - LLM reasoning stream surfaced directly to the UI for operator inspection and debugging.
 
+## 🚀 Recent Production Features
+
+- Production-Grade Deployment: Fully Dockerized FastAPI backend securely hosted on Hugging Face Spaces (`python:3.9-slim`).
+- Zero-CORS Architecture: Seamless cross-origin communication between the Next.js Edge network and Hugging Face infrastructure.
+- Autonomous LLM Loop: Live integration with `Qwen/Qwen2.5-7B-Instruct` for real-time `[THINKING]`, action execution (`check_logs`, `rollback_config`), and deterministic scoring.
+
 ## Architecture
 
 ### Frontend
@@ -98,6 +108,8 @@ The FastAPI service owns the incident simulation, event emission, and LLM loop. 
 
 ## Local Setup
 
+The backend is now live on Hugging Face Spaces. For frontend-only local development, you can point `NEXT_PUBLIC_API_URL` at `https://aravind20-sre-bot-engine.hf.space` and run the dashboard without starting the backend locally.
+
 ### 1. Start the backend
 
 ```bash
@@ -111,10 +123,11 @@ uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```bash
 cd dashboard
 npm install
+export NEXT_PUBLIC_API_URL=https://aravind20-sre-bot-engine.hf.space
 npm run dev
 ```
 
-Open `http://localhost:3000` and connect the dashboard to the backend SSE stream at `http://127.0.0.1:8000/api/stream-logs`.
+Open `http://localhost:3000` and connect the dashboard to the production SSE stream at `https://aravind20-sre-bot-engine.hf.space/api/stream-logs`, or start the backend locally if you want a full local stack.
 
 ## Runtime Notes
 
