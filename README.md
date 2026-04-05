@@ -18,15 +18,17 @@ Production-grade incident remediation RL environment for observability-driven fa
 
 </div>
 
+## 🚀 Live Production Demo
+
+🌐 Frontend Dashboard (Vercel): https://sre-bot-autonomous-incident-remedia-five.vercel.app
+
+🧠 Backend API (Hugging Face Spaces): https://aravind20-sre-bot-engine.hf.space/docs
+
 ## Overview
 
 `SRE-Bot` is a full-stack incident remediation environment built for agent evaluation under production-shaped conditions. The platform combines a `Next.js` control surface, a `FastAPI` execution engine, a live SSE event stream, and a 3D topology map that reflects remediation state as the agent works through an outage.
 
 The design goal is straightforward: turn incident handling into a repeatable loop with strong Observability, explicit action selection, and Deterministic Scoring. The environment emits logs, metrics, and action feedback as structured observations. The agent reasons over that state, selects from a constrained remediation action space, and continues until the fault is resolved or the step budget is exhausted.
-
-🌍 Live Dashboard (Vercel): https://sre-bot-autonomous-incident-remedia-five.vercel.app
-
-🧠 Backend API / Swagger (Hugging Face Spaces): https://aravind20-sre-bot-engine.hf.space/docs
 
 ## Quick Glance
 
@@ -127,7 +129,7 @@ export NEXT_PUBLIC_API_URL=https://aravind20-sre-bot-engine.hf.space
 npm run dev
 ```
 
-Open `http://localhost:3000` and connect the dashboard to the production SSE stream at `https://aravind20-sre-bot-engine.hf.space/api/stream-logs`, or start the backend locally if you want a full local stack.
+Open `http://localhost:3000` to view the local development build and connect the dashboard to the production SSE stream at `https://aravind20-sre-bot-engine.hf.space/api/stream-logs`, or start the backend locally if you want a full local stack.
 
 ## Runtime Notes
 
