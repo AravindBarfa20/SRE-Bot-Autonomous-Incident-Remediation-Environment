@@ -1,126 +1,152 @@
-# SRE-Bot
+# SRE-Bot (ContraCulture) 🚀
 
-<div align="center">
+**A Production-Grade, Autonomous Incident Remediation Environment for Agentic SRE Evaluation.**
 
-Production-grade incident remediation RL environment for observability-driven failure handling, agentic triage, and real-time operator feedback.
+SRE-Bot is a full-stack OpenEnv-style benchmark and control plane for evaluating whether LLM agents can reason like real Site Reliability Engineers under adversarial production pressure. It combines a live observability dashboard, a containerized FastAPI execution engine, structured state transitions, reward shaping, and process-supervised remediation loops into one submission-ready environment.
 
-<p>
-  <img src="https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js Badge" />
-  <img src="https://img.shields.io/badge/FastAPI-API-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI Badge" />
-  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript Badge" />
-  <img src="https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python Badge" />
-  <img src="https://img.shields.io/badge/Hugging%20Face-Router-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" alt="Hugging Face Badge" />
-</p>
+## Live Production
 
-<p>
-  <img src="./docs/demo.gif" alt="Demo GIF Placeholder" width="920" />
-</p>
+🌍 Dashboard (Vercel): https://sre-bot-autonomous-incident-remedia-five.vercel.app
 
-</div>
+🧠 Engine (Hugging Face Spaces): https://aravind20-sre-bot-engine.hf.space/docs
 
-## 🚀 Live Production Demo
+---
 
-🌐 Frontend Dashboard (Vercel): https://sre-bot-autonomous-incident-remedia-five.vercel.app
+## Why This Project Exists
 
-🧠 Backend API (Hugging Face Spaces): https://aravind20-sre-bot-engine.hf.space/docs
+Most agent demos stop at tool calling and a pretty UI. SRE-Bot is designed to evaluate something harder: whether an LLM can distinguish signal from noise, inspect evidence before acting, avoid destructive interventions, and recover a failing distributed system with the same operational discipline expected from a production on-call engineer.
 
-## Overview
+This repository is built for the Meta x Scaler OpenEnv Hackathon and optimized around three principles:
 
-`SRE-Bot` is a full-stack incident remediation environment built for agent evaluation under production-shaped conditions. The platform combines a `Next.js` control surface, a `FastAPI` execution engine, a live SSE event stream, and a 3D topology map that reflects remediation state as the agent works through an outage.
+- **Observability-first reasoning**: the agent must act on logs, metrics, and explicit environment state.
+- **Process supervision over binary scoring**: the environment rewards good investigative behavior, not just lucky fixes.
+- **Adversarial realism**: the hardest benchmark is intentionally deceptive and punishes brute-force remediation.
 
-The design goal is straightforward: turn incident handling into a repeatable loop with strong Observability, explicit action selection, and Deterministic Scoring. The environment emits logs, metrics, and action feedback as structured observations. The agent reasons over that state, selects from a constrained remediation action space, and continues until the fault is resolved or the step budget is exhausted.
+---
 
-## Quick Glance
+## 🔥 The "Cascading Ghost" Benchmark
 
-| Layer | Technology | Role |
-| --- | --- | --- |
-| Frontend | Next.js 16, React 19, TypeScript | Operator console, terminal stream, topology rendering, action ledger |
-| Visualization | Three.js, React Three Fiber, Drei | Real-time topology map and service health visualization |
-| Backend | FastAPI, Python 3.9 | Incident environment, SSE transport, remediation orchestration |
-| Agent Runtime | Hugging Face Router | LLM-driven action selection and streamed reasoning |
-| Environment Model | Pydantic, enum-based action space | Typed observations, constrained actions, deterministic transitions |
-| Streaming | Server-Sent Events | Low-latency propagation of logs, thinking traces, and remediation updates |
+The flagship benchmark in SRE-Bot is **`cascading-ghost`**, our adversarial hard task designed to break shallow reasoning and reward disciplined investigation.
 
-## System Flow
+### Scenario
 
-```mermaid
-flowchart LR
-    A[Operator triggers remediation run] --> B[FastAPI IncidentEnv reset]
-    B --> C[Observation assembled<br/>logs + metrics + active alerts]
-    C --> D[Hugging Face Router<br/>Qwen2.5-7B-Instruct]
-    D --> E[LLM chooses ActionType + target]
-    E --> F[IncidentEnv step execution]
-    F --> G[Deterministic scoring and feedback]
-    G --> H[SSE stream emits logs, system events, reasoning]
-    H --> I[Next.js dashboard]
-    I --> J[Adversarial terminal updates]
-    I --> K[Action ledger sync]
-    I --> L[3D topology health transition]
-    G --> M{Incident resolved?}
-    M -- No --> C
-    M -- Yes --> N[Run complete]
-```
+- The **Gateway** presents the obvious symptoms: elevated CPU, severe latency, and timeout alerts.
+- Those symptoms are a **red herring**.
+- The actual root cause sits deeper in the stack: **silent connection pool exhaustion / config drift in `db-proxy`**, causing dropped queries and downstream latency amplification without loud, clean alerts.
 
-## Core Capabilities
+### Why It Matters
 
-- Real-time Observability pipeline with SSE-delivered terminal events and system annotations.
-- Remediation Loop driven by a constrained `ActionType` enum instead of unconstrained free-form tool execution.
-- 3D service topology that reacts to incident progress and service health changes.
-- Auto-synchronized action ledger that mirrors execution intent from streamed events.
-- Deterministic Scoring path for repeatable evaluation of agent performance across incident runs.
-- LLM reasoning stream surfaced directly to the UI for operator inspection and debugging.
+This benchmark forces an agent to do what strong SREs do in real incidents:
 
-## 🚀 Recent Production Features
+- ignore the first noisy metric spike instead of chasing the hottest graph
+- trace latency propagation across services
+- perform active investigation with `check_logs`
+- identify the hidden fault domain in `db-proxy`
+- apply the precise corrective action `rollback_config`
+- avoid panic moves like restarting or scaling healthy infrastructure
 
-- Production-Grade Deployment: Fully Dockerized FastAPI backend securely hosted on Hugging Face Spaces (`python:3.9-slim`).
-- Zero-CORS Architecture: Seamless cross-origin communication between the Next.js Edge network and Hugging Face infrastructure.
-- Autonomous LLM Loop: Live integration with `Qwen/Qwen2.5-7B-Instruct` for real-time `[THINKING]`, action execution (`check_logs`, `rollback_config`), and deterministic scoring.
+In other words, the benchmark is explicitly designed to separate thoughtful operators from brute-force tool users.
 
-## Architecture
+---
 
-### Frontend
+## ⚖️ Reward Shaping & Process Supervision
 
-The dashboard is built in `dashboard/` with the App Router in `Next.js`. The parent page owns the SSE connection and lifts shared state for:
+SRE-Bot does not rely on simplistic binary success labels. The environment uses **fractional rewards** to supervise both *how* the agent works and *whether* it resolves the incident correctly.
 
-- connection health
-- terminal log events
-- system status transitions
-- action ledger entries
+### Reward Components
 
-The right-hand operational surfaces stay synchronized because they all consume the same upstream event stream rather than maintaining local heuristics.
+- **Cost of downtime penalty**: `-0.05` per step
+- **Triage reward**: `+0.1` for checking logs on the true faulty service before attempting a fix
+- **Destructive penalty**: `-0.5` for restarting or modifying a healthy node
+- **Resolution reward**: `+1.0` only when the root cause is actually fixed and verified
 
-### Backend
+### Process Supervision Design
 
-The engine in `engine/` exposes:
+The reward model explicitly encourages:
 
-- `GET /api/stream-logs` for SSE transport
-- `POST /api/trigger-demo` to start the remediation loop
-- `POST /api/run-agent` as an alias for agent execution
+- evidence gathering before intervention
+- minimizing unnecessary actions
+- root-cause resolution instead of symptom suppression
+- operational efficiency under time pressure
 
-The FastAPI service owns the incident simulation, event emission, and LLM loop. Observations include health, active alerts, recent logs, metrics, and the last action feedback so the model operates on the same state an SRE would inspect during live triage.
+This makes the benchmark significantly more robust for both automated judges and human evaluators because the environment can distinguish:
+
+- lucky success
+- safe triage
+- destructive guesswork
+- precise, verified remediation
+
+### Evaluation Contract
+
+The evaluation loop is implemented with strict stdout/stderr separation so it can satisfy judge parsers cleanly:
+
+- stdout emits only the OpenEnv-style control tokens:
+  - `[START]`
+  - `[STEP]`
+  - `[END]`
+- stderr is reserved for logging, warnings, and debugging noise
+
+This keeps the run trace deterministic and validator-friendly.
+
+---
+
+## Architecture & Stack
+
+- **Frontend**: Next.js 15, Three.js (WebGL topology visualization), React
+- **Backend Engine**: FastAPI, Docker, containerized for OpenEnv-style deployment and Hugging Face Spaces hosting
+- **Agent Runtime**: Qwen-2.5-7B-Instruct via the Hugging Face Inference API for low-latency reasoning and clean browser-to-engine connectivity
+
+---
+
+## System Design
+
+SRE-Bot is split into two cooperating surfaces:
+
+- a **frontend control plane** for live incident visualization, terminal streaming, and action playback
+- a **backend incident engine** that owns benchmark scenarios, reward shaping, state transitions, and evaluator-visible metadata
+
+### Backend Responsibilities
+
+The engine is responsible for:
+
+- generating structured observations
+- maintaining benchmark-specific hidden state
+- executing remediation actions
+- computing reward breakdowns
+- tracking evaluator-facing incident metadata such as:
+  - root-cause identification
+  - unnecessary action count
+  - system health history
+  - cumulative incident cost
+
+### Frontend Responsibilities
+
+The dashboard is responsible for:
+
+- consuming SSE logs from the engine
+- rendering topology health transitions
+- showing adversarial terminal output
+- exposing remediation progress in a human-readable format for judges and reviewers
+
+---
 
 ## Repository Layout
 
 ```text
 .
-├── dashboard/   # Next.js UI, topology view, terminal, action ledger
-├── engine/      # FastAPI app, incident environment, stream transport, LLM agent
-└── graders.py   # Evaluation helper entrypoint
+├── dashboard/      # Next.js control plane, SSE client, topology map, terminal, action ledger
+├── engine/         # FastAPI environment engine, reward logic, streaming transport, agent interface
+├── graders.py      # Shared grading/reward logic for evaluator-facing process supervision
+└── inference.py    # Strict evaluation runner emitting [START]/[STEP]/[END]
 ```
+
+---
 
 ## Local Setup
 
-The backend is now live on Hugging Face Spaces. For frontend-only local development, you can point `NEXT_PUBLIC_API_URL` at `https://aravind20-sre-bot-engine.hf.space` and run the dashboard without starting the backend locally.
+For evaluators, local setup is intentionally minimal.
 
-### 1. Start the backend
-
-```bash
-cd engine
-export HF_TOKEN=your_hugging_face_token
-uvicorn main:app --reload --host 127.0.0.1 --port 8000
-```
-
-### 2. Start the dashboard
+### 1. Run the frontend against the live production engine
 
 ```bash
 cd dashboard
@@ -129,14 +155,52 @@ export NEXT_PUBLIC_API_URL=https://aravind20-sre-bot-engine.hf.space
 npm run dev
 ```
 
-Open `http://localhost:3000` to view the local development build and connect the dashboard to the production SSE stream at `https://aravind20-sre-bot-engine.hf.space/api/stream-logs`, or start the backend locally if you want a full local stack.
+Then open `http://localhost:3000`.
 
-## Runtime Notes
+### 2. Run the backend locally only if you want a full local stack
 
-- The SSE channel is hardened for long-lived browser connections with explicit `text/event-stream` headers, proxy buffering disabled, and periodic keep-alives.
-- The agent currently targets the Hugging Face Router chat completions API.
-- The remediation action space is intentionally bounded to support evaluation, replayability, and stable grading behavior.
+```bash
+cd engine
+export HF_TOKEN=your_hugging_face_token
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
 
-## Why This Design
+### 3. Run the strict evaluator locally
 
-Most hackathon demos stop at a chat box and a spinner. `SRE-Bot` is structured more like an operator-facing control plane: observable state, explicit remediation intent, and a feedback loop that can be scored, debugged, and improved. That makes it useful both as a demo surface and as an evaluation harness for incident-response agents.
+```bash
+python inference.py --model qwen-7b
+```
+
+---
+
+## What Judges Can Inspect
+
+SRE-Bot exposes both human-facing and evaluator-facing surfaces:
+
+- **Live dashboard** for visual inspection of topology state and incident progression
+- **Swagger docs** for API inspection and backend validation
+- **Structured state metadata** through `/state` and `/api/state`
+- **Strict evaluator trace** via `inference.py`
+
+This makes the project simultaneously:
+
+- easy to demo
+- easy to inspect
+- easy to validate
+- hard to game
+
+---
+
+## Submission Focus
+
+This repository is optimized for the exact dimensions that matter in an OpenEnv-style benchmark:
+
+- adversarial task quality
+- process-supervised reward shaping
+- strict evaluator output contracts
+- production-grade deployment
+- transparent debugging surfaces for judges
+
+If the benchmark is doing its job, weak agents will chase the gateway spike, while strong agents will investigate, localize, and surgically repair the database drift.
+
+That separation is the point.
