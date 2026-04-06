@@ -1,152 +1,167 @@
-# SRE-Bot (ContraCulture) 🚀
+# SRE-Bot 🚀
 
 **A Production-Grade, Autonomous Incident Remediation Environment for Agentic SRE Evaluation.**
 
-SRE-Bot is a full-stack OpenEnv-style benchmark and control plane for evaluating whether LLM agents can reason like real Site Reliability Engineers under adversarial production pressure. It combines a live observability dashboard, a containerized FastAPI execution engine, structured state transitions, reward shaping, and process-supervised remediation loops into one submission-ready environment.
+## 🌐 Live Deployment
 
-## Live Production
+**Production Dashboard (Vercel):** https://sre-bot-autonomous-incident-remedia-five.vercel.app
 
-🌍 Dashboard (Vercel): https://sre-bot-autonomous-incident-remedia-five.vercel.app
-
-🧠 Engine (Hugging Face Spaces): https://aravind20-sre-bot-engine.hf.space/docs
+**Execution Engine (Hugging Face Spaces):** https://aravind20-sre-bot-engine.hf.space/docs
 
 ---
 
-## Why This Project Exists
+## 🧭 Overview
 
-Most agent demos stop at tool calling and a pretty UI. SRE-Bot is designed to evaluate something harder: whether an LLM can distinguish signal from noise, inspect evidence before acting, avoid destructive interventions, and recover a failing distributed system with the same operational discipline expected from a production on-call engineer.
+Most agent demos stop at basic tool calling. SRE-Bot is built to evaluate something harder: whether an LLM can distinguish signal from noise, avoid destructive interventions, and recover a failing distributed system under adversarial production pressure.
 
-This repository is built for the Meta x Scaler OpenEnv Hackathon and optimized around three principles:
+Built for the **Meta x Scaler OpenEnv Hackathon**, SRE-Bot combines a real-time frontend control plane, a containerized simulation engine, structured observations, process-supervised rewards, and strict evaluator-friendly runtime contracts into a benchmark that looks and behaves like a production system instead of a toy environment.
 
-- **Observability-first reasoning**: the agent must act on logs, metrics, and explicit environment state.
-- **Process supervision over binary scoring**: the environment rewards good investigative behavior, not just lucky fixes.
-- **Adversarial realism**: the hardest benchmark is intentionally deceptive and punishes brute-force remediation.
+SRE-Bot is designed to answer a specific question:
+
+> Can an agent behave like a disciplined SRE when the obvious signal is wrong?
 
 ---
 
 ## 🔥 The "Cascading Ghost" Benchmark
 
-The flagship benchmark in SRE-Bot is **`cascading-ghost`**, our adversarial hard task designed to break shallow reasoning and reward disciplined investigation.
+The hardest benchmark in SRE-Bot is **Cascading Ghost**, an adversarial incident designed to expose shallow reasoning and reward precise operational thinking.
 
-### Scenario
+### The Trap
 
-- The **Gateway** presents the obvious symptoms: elevated CPU, severe latency, and timeout alerts.
-- Those symptoms are a **red herring**.
-- The actual root cause sits deeper in the stack: **silent connection pool exhaustion / config drift in `db-proxy`**, causing dropped queries and downstream latency amplification without loud, clean alerts.
+The **API Gateway** emits the most obvious symptoms in the system:
+
+- massive CPU spikes
+- latency explosions
+- timeout alerts
+
+Those signals are intentionally misleading. They are the red herring.
+
+### The Reality
+
+The real root cause lives deeper in the stack:
+
+- **silent connection pool exhaustion**
+- hidden **configuration drift**
+- failure concentrated in **`db-proxy`**
+
+This causes query loss and latency propagation without producing the kind of clean alert that a weak agent expects.
+
+### The Test
+
+The benchmark is designed so that:
+
+- agents that blindly restart or scale the Gateway fail
+- agents that investigate logs with `check_logs` progress correctly
+- agents that localize the failure to `db-proxy` and apply `rollback_config` succeed
+
+This benchmark matters because it measures whether an LLM can perform structured incident triage rather than reacting to the loudest graph on the screen.
+
+---
+
+## ⚖️ Process Supervision & RL Reward Shaping
+
+SRE-Bot does not use simplistic pass/fail scoring. The environment applies **process supervision** with fractional rewards so evaluators can measure *how* an agent works, not just whether it eventually gets lucky.
+
+### Reward Model
+
+- **Triage Reward (+0.1)**: awarded for checking logs before mutating state
+- **Downtime Cost (-0.05/step)**: penalizes inefficient action sequences
+- **Destructive Penalty (-0.5)**: applied when the agent restarts or mutates a perfectly healthy node
+- **Resolution (+1.0)**: awarded only for verified root-cause remediation
 
 ### Why It Matters
 
-This benchmark forces an agent to do what strong SREs do in real incidents:
+This reward design explicitly promotes:
 
-- ignore the first noisy metric spike instead of chasing the hottest graph
-- trace latency propagation across services
-- perform active investigation with `check_logs`
-- identify the hidden fault domain in `db-proxy`
-- apply the precise corrective action `rollback_config`
-- avoid panic moves like restarting or scaling healthy infrastructure
+- careful evidence gathering
+- root-cause analysis
+- efficient incident handling
+- safe remediation over brute-force intervention
 
-In other words, the benchmark is explicitly designed to separate thoughtful operators from brute-force tool users.
-
----
-
-## ⚖️ Reward Shaping & Process Supervision
-
-SRE-Bot does not rely on simplistic binary success labels. The environment uses **fractional rewards** to supervise both *how* the agent works and *whether* it resolves the incident correctly.
-
-### Reward Components
-
-- **Cost of downtime penalty**: `-0.05` per step
-- **Triage reward**: `+0.1` for checking logs on the true faulty service before attempting a fix
-- **Destructive penalty**: `-0.5` for restarting or modifying a healthy node
-- **Resolution reward**: `+1.0` only when the root cause is actually fixed and verified
-
-### Process Supervision Design
-
-The reward model explicitly encourages:
-
-- evidence gathering before intervention
-- minimizing unnecessary actions
-- root-cause resolution instead of symptom suppression
-- operational efficiency under time pressure
-
-This makes the benchmark significantly more robust for both automated judges and human evaluators because the environment can distinguish:
-
-- lucky success
-- safe triage
-- destructive guesswork
-- precise, verified remediation
+That makes the benchmark significantly more robust for both automated Meta/OpenEnv judges and human reviewers.
 
 ### Evaluation Contract
 
-The evaluation loop is implemented with strict stdout/stderr separation so it can satisfy judge parsers cleanly:
+SRE-Bot is wired to support the strict OpenEnv evaluation format:
 
-- stdout emits only the OpenEnv-style control tokens:
-  - `[START]`
-  - `[STEP]`
-  - `[END]`
-- stderr is reserved for logging, warnings, and debugging noise
+- `[START]`
+- `[STEP]`
+- `[END]`
 
-This keeps the run trace deterministic and validator-friendly.
+All debugging and internal logging are separated from evaluator output so stdout remains parseable and validator-safe.
 
 ---
 
-## Architecture & Stack
+## 🏗️ Architecture & Stack
 
-- **Frontend**: Next.js 15, Three.js (WebGL topology visualization), React
-- **Backend Engine**: FastAPI, Docker, containerized for OpenEnv-style deployment and Hugging Face Spaces hosting
-- **Agent Runtime**: Qwen-2.5-7B-Instruct via the Hugging Face Inference API for low-latency reasoning and clean browser-to-engine connectivity
+### Frontend Control Plane
+
+- Next.js 15
+- React
+- Three.js for real-time WebGL topology visualization
+
+### Simulation Engine
+
+- FastAPI
+- Python
+- Dockerized for OpenEnv-style execution and deployment
+
+### Agent Runtime
+
+- Qwen-2.5-7B-Instruct
+- Hugging Face Serverless Inference for low-friction hosted reasoning and zero local model orchestration
 
 ---
 
-## System Design
+## 🧩 System Design
 
-SRE-Bot is split into two cooperating surfaces:
+SRE-Bot is organized as two tightly coordinated surfaces:
 
-- a **frontend control plane** for live incident visualization, terminal streaming, and action playback
-- a **backend incident engine** that owns benchmark scenarios, reward shaping, state transitions, and evaluator-visible metadata
+- a **frontend dashboard** for live observability, streamed incident activity, and topology state transitions
+- a **backend engine** for benchmark execution, reward shaping, state tracking, and evaluator metadata
 
 ### Backend Responsibilities
 
-The engine is responsible for:
+The engine owns:
 
-- generating structured observations
-- maintaining benchmark-specific hidden state
-- executing remediation actions
-- computing reward breakdowns
-- tracking evaluator-facing incident metadata such as:
-  - root-cause identification
+- incident initialization and reset logic
+- structured observations and action validation
+- process-supervised reward computation
+- adversarial task logic
+- state tracking for:
+  - root cause identification
   - unnecessary action count
   - system health history
   - cumulative incident cost
 
 ### Frontend Responsibilities
 
-The dashboard is responsible for:
+The dashboard renders:
 
-- consuming SSE logs from the engine
-- rendering topology health transitions
-- showing adversarial terminal output
-- exposing remediation progress in a human-readable format for judges and reviewers
+- live SSE-backed terminal activity
+- action execution traces
+- topology health transitions
+- evaluator-friendly views of system degradation and recovery
 
 ---
 
-## Repository Layout
+## 📦 Repository Layout
 
 ```text
 .
-├── dashboard/      # Next.js control plane, SSE client, topology map, terminal, action ledger
-├── engine/         # FastAPI environment engine, reward logic, streaming transport, agent interface
-├── graders.py      # Shared grading/reward logic for evaluator-facing process supervision
-└── inference.py    # Strict evaluation runner emitting [START]/[STEP]/[END]
+├── dashboard/      # Next.js control plane, terminal, topology map, action visualization
+├── engine/         # FastAPI simulation engine, streaming, environment logic, agent runtime hooks
+├── graders.py      # Shared reward shaping and process supervision logic
+└── inference.py    # Strict evaluation runner for OpenEnv-style benchmark traces
 ```
 
 ---
 
-## Local Setup
+## ⚡ Quick Local Setup
 
-For evaluators, local setup is intentionally minimal.
+Judges can run the dashboard locally while pointing at the production engine.
 
-### 1. Run the frontend against the live production engine
+### 1. Run the dashboard
 
 ```bash
 cd dashboard
@@ -157,7 +172,7 @@ npm run dev
 
 Then open `http://localhost:3000`.
 
-### 2. Run the backend locally only if you want a full local stack
+### 2. Run the engine locally only if needed
 
 ```bash
 cd engine
@@ -165,7 +180,7 @@ export HF_TOKEN=your_hugging_face_token
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-### 3. Run the strict evaluator locally
+### 3. Run the evaluator
 
 ```bash
 python inference.py --model qwen-7b
@@ -173,34 +188,18 @@ python inference.py --model qwen-7b
 
 ---
 
-## What Judges Can Inspect
+## 🧪 What This Repository Demonstrates
 
-SRE-Bot exposes both human-facing and evaluator-facing surfaces:
+SRE-Bot is not just a demo UI. It is a benchmarked, inspectable, production-shaped environment for evaluating:
 
-- **Live dashboard** for visual inspection of topology state and incident progression
-- **Swagger docs** for API inspection and backend validation
-- **Structured state metadata** through `/state` and `/api/state`
-- **Strict evaluator trace** via `inference.py`
+- adversarial incident reasoning
+- process-supervised remediation behavior
+- structured action selection
+- safe intervention policies
+- evaluator-compliant runtime traces
 
-This makes the project simultaneously:
+Weak agents chase the gateway spike.
 
-- easy to demo
-- easy to inspect
-- easy to validate
-- hard to game
+Strong agents trace the failure back to the database, investigate before acting, and fix the real fault.
 
----
-
-## Submission Focus
-
-This repository is optimized for the exact dimensions that matter in an OpenEnv-style benchmark:
-
-- adversarial task quality
-- process-supervised reward shaping
-- strict evaluator output contracts
-- production-grade deployment
-- transparent debugging surfaces for judges
-
-If the benchmark is doing its job, weak agents will chase the gateway spike, while strong agents will investigate, localize, and surgically repair the database drift.
-
-That separation is the point.
+That separation is the point of the benchmark.
