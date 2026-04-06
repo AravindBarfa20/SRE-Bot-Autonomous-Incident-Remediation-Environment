@@ -49,6 +49,7 @@ export function parseLog(data: string): ParsedLog | null {
       actionId: json.action_id || undefined,
       actionStatus: actionStatus as ActionStatus | undefined,
       health: health as HealthStatus | undefined,
+      metadata: json.metadata || undefined,
     };
   } catch {
     let status: "INFO" | "WARN" | "ERROR" = "INFO";

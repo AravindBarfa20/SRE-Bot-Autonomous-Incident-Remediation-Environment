@@ -3,7 +3,7 @@ import json
 from collections import deque
 from datetime import datetime, timezone
 from itertools import count
-from typing import AsyncGenerator, Literal, Optional
+from typing import Any, AsyncGenerator, Literal, Optional
 
 MessageType = Literal["action", "system"]
 ActionStatus = Literal["pending", "success", "failed"]
@@ -37,6 +37,7 @@ async def log_to_stream(
     action_id: Optional[str] = None,
     action_status: Optional[ActionStatus] = None,
     health: Optional[HealthStatus] = None,
+    metadata: Optional[dict[str, Any]] = None,
 ):
     """
     Push a structured log entry to every active SSE subscriber.
@@ -66,6 +67,7 @@ async def log_to_stream(
         "action_id": action_id,
         "action_status": action_status,
         "health": health,
+        "metadata": metadata,
     }
     encoded_payload = json.dumps(payload)
 

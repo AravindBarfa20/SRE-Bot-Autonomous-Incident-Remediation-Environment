@@ -41,4 +41,11 @@ export interface ParsedLog {
   actionId?: string;
   actionStatus?: ActionStatus;
   health?: HealthStatus;
+  metadata?: {
+    state?: {
+      incident_cost?: number;
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  };
 }

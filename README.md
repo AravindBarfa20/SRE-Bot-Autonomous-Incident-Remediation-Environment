@@ -2,6 +2,9 @@
 
 **A Production-Grade, Autonomous Incident Remediation Environment for Agentic SRE Evaluation.**
 
+**Why SRE-Bot is a Frontier Benchmark (Adversarial Design):**
+Unlike standard environments with linear logic, SRE-Bot implements the "Cascading Ghost" fault. We inject high-CPU noise into the API Gateway to bait naive models, while the actual config drift hides in the DB-proxy. We utilize Process Supervision (fractional rewards) to penalize destructive guessing and reward systematic log triage.
+
 ## 🌐 Live Deployment
 
 **Production Dashboard (Vercel):** https://sre-bot-autonomous-incident-remedia-five.vercel.app

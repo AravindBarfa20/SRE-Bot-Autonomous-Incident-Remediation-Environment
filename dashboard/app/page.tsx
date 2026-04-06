@@ -30,6 +30,7 @@ export default function Dashboard() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [actions, setActions] = useState<ActionEntry[]>([]);
   const [systemStatus, setSystemStatus] = useState<SystemHealth>(INITIAL_HEALTH);
+  const [incidentCost, setIncidentCost] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const seenEventIdsRef = useRef<Set<string>>(new Set());
@@ -60,6 +61,11 @@ export default function Dashboard() {
       const nextLogs = [...prev, logEntry];
       return nextLogs.slice(-MAX_LOG_ENTRIES);
     });
+
+    const nextIncidentCost = parsed.metadata?.state?.incident_cost;
+    if (typeof nextIncidentCost === "number") {
+      setIncidentCost(nextIncidentCost);
+    }
 
     const healthUpdate = getHealthFromLog(
       parsed.message,
@@ -205,6 +211,11 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex items-center gap-4">
+          <div className="rounded border border-red-500/30 bg-red-500/10 px-3 py-1">
+            <span className="text-xs font-semibold text-red-400">
+              Cost of Outage: ${incidentCost.toFixed(2)}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             <div
               className={`h-2 w-2 rounded-full ${

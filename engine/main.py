@@ -2,9 +2,10 @@ import asyncio
 from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+
 from agent import HuggingFaceSREAgent, HuggingFaceAgentError
-from stream import event_generator
 from env import IncidentEnv
+from stream import event_generator
 
 try:
     from dotenv import load_dotenv
@@ -57,7 +58,27 @@ async def run_agent_loop(max_steps: int = 8):
             msg_type="system",
         )
 
-        action = await agent.choose_action(observation, step)
+        try:
+            action = await agent.choose_action(observation, step)
+        except HuggingFaceAgentError as exc:
+            observation, reward, terminated, truncated, info = await env._handle_invalid_action(
+                str(exc)
+            )
+            done = terminated or truncated
+            await env._emit_log(
+                message=(
+                    f"[THINKING] Step {step} produced an invalid model action. "
+                    f"Reward={reward:.2f}. Error={info.get('error')}"
+                ),
+                target="llm-agent",
+                status="ERROR",
+                msg_type="system",
+            )
+            if done:
+                break
+            await asyncio.sleep(1)
+            continue
+
         await env._emit_log(
             message=(
                 f"[THINKING] Chosen action: {action.action_type.value} on {action.target}. "
@@ -68,11 +89,13 @@ async def run_agent_loop(max_steps: int = 8):
             msg_type="system",
         )
 
-        observation, reward, done = await env.step(action)
+        observation, reward, terminated, truncated, info = await env.step(action)
+        done = terminated or truncated
         await env._emit_log(
             message=(
                 f"[THINKING] Step {step} complete. Reward={reward:.2f}. "
-                f"Resolved={done}. Feedback={observation.last_action_feedback}"
+                f"Resolved={done}. Feedback={observation.last_action_feedback}. "
+                f"Error={info.get('error')}"
             ),
             target="llm-agent",
             status="INFO",
@@ -138,3 +161,9 @@ async def trigger_demo(background_tasks: BackgroundTasks):
 @app.post("/api/run-agent")
 async def run_agent(background_tasks: BackgroundTasks):
     return await trigger_demo(background_tasks)
+
+
+@app.get("/state")
+@app.get("/api/state")
+async def get_state():
+    return env.get_state_snapshot().model_dump(mode="json")

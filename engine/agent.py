@@ -29,9 +29,15 @@ def _json_default(value: Any):
 
 
 class HuggingFaceSREAgent:
-    def __init__(self, token: Optional[str] = None, model_id: str = HF_MODEL_ID):
+    def __init__(
+        self,
+        token: Optional[str] = None,
+        model_id: str = HF_MODEL_ID,
+        temperature: float = 0.2,
+    ):
         self.token = token or os.getenv("HF_TOKEN")
         self.model_id = model_id
+        self.temperature = temperature
         self.base_url = HF_ROUTER_BASE_URL
         self.api_url = HF_CHAT_COMPLETIONS_URL
 
@@ -54,7 +60,7 @@ class HuggingFaceSREAgent:
                 }
             ],
             "max_tokens": 220,
-            "temperature": 0.2,
+            "temperature": self.temperature,
         }
 
         try:
