@@ -21,7 +21,7 @@ const INITIAL_HEALTH: SystemHealth = {
   gateway: "healthy",
   db: "degraded",
 };
-const STREAM_LOGS_URL = "https://aravind20-sre-bot-engine.hf.space/api/stream-logs";
+const STREAM_LOGS_URL = "/api/stream-logs";
 const MAX_LOG_ENTRIES = 250;
 const MAX_RECONNECT_DELAY_MS = 30000;
 const INITIAL_RECONNECT_DELAY_MS = 1000;

@@ -8,9 +8,14 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from graders import RewardContext, calculate_reward
-from models import Action, ActionType, Observation, State
-from stream import log_to_stream
+try:
+    from .graders import RewardContext, calculate_reward
+    from .models import Action, ActionType, Observation, State
+    from .stream import log_to_stream
+except ImportError:  # pragma: no cover - script fallback
+    from graders import RewardContext, calculate_reward
+    from models import Action, ActionType, Observation, State
+    from stream import log_to_stream
 
 
 BENCHMARK_NAME = "openenv-sre-bot-v1"
@@ -208,6 +213,9 @@ class IncidentEnv:
         self.last_action_feedback = "Environment initialized."
         self.state = self._new_state()
 
+    def _set_feedback(self, message: str) -> None:
+        self.last_action_feedback = f"[Step {self.state.steps_taken}] {message}"
+
     def _load_scenario(self, difficulty: str) -> ScenarioProfile:
         return SCENARIOS.get(difficulty.upper(), SCENARIOS["HARD"])
 
@@ -339,7 +347,7 @@ class IncidentEnv:
         self.steps = 0
         self.resolved = False
         self.root_cause_identified = False
-        self.last_action_feedback = "Environment reset."
+        self._set_feedback("Environment reset.")
         self.state = self._new_state()
         await self._emit_log(
             message=(
@@ -371,7 +379,7 @@ class IncidentEnv:
                 invalid_reason=error_message,
             )
         )
-        self.last_action_feedback = "Error: Invalid action or target"
+        self._set_feedback("Error: Invalid action or target")
         self.state.last_error = error_message
         self.state.incident_cost = round(
             self.state.incident_cost + breakdown.incident_cost_delta, 2
@@ -404,8 +412,8 @@ class IncidentEnv:
             self.state.history.append(action)
             self.state.last_error = None
             action_id = f"step-{self.steps}:{action.action_type.value}:{action.target}"
-            self.last_action_feedback = (
-                f"Agent executed {action.action_type.value} on {action.target}."
+            self._set_feedback(
+                f"Action executed: {action.action_type.value} on {action.target}."
             )
 
             await self._emit_log(
@@ -485,7 +493,7 @@ class IncidentEnv:
                 self.state.unnecessary_actions_count += 1
 
             if breakdown.root_cause_identified:
-                self.last_action_feedback = (
+                self._set_feedback(
                     f"Root cause isolated via logs on {action.target}."
                 )
                 await self._emit_log(
@@ -498,7 +506,7 @@ class IncidentEnv:
                     action_status="success",
                 )
             elif premature_resolve:
-                self.last_action_feedback = (
+                self._set_feedback(
                     "Resolve called before the incident was verified as healthy."
                 )
                 self.state.last_error = breakdown.error
@@ -512,7 +520,7 @@ class IncidentEnv:
                     action_status="failed",
                 )
             elif breakdown.unnecessary_action:
-                self.last_action_feedback = (
+                self._set_feedback(
                     f"{action.action_type.value} on {action.target} targeted a healthy service."
                 )
                 await self._emit_log(
@@ -531,7 +539,7 @@ class IncidentEnv:
                 and action.action_type in {ActionType.CHECK_LOGS, ActionType.CHECK_METRICS}
                 and action.target == self.scenario.faulty_target
             ):
-                self.last_action_feedback = (
+                self._set_feedback(
                     f"Fix verification succeeded on {action.target}."
                 )
                 await self._emit_log(
@@ -545,7 +553,7 @@ class IncidentEnv:
                     health="healthy",
                 )
             elif action.action_type == self.scenario.remediation_action and action.target == self.scenario.remediation_target:
-                self.last_action_feedback = (
+                self._set_feedback(
                     f"{action.action_type.value} applied on {action.target}. Verification still required."
                 )
                 await self._emit_log(
@@ -559,9 +567,7 @@ class IncidentEnv:
                     health="degraded",
                 )
             elif successful_resolve:
-                self.last_action_feedback = (
-                    "Incident resolved and verified."
-                )
+                self._set_feedback("Incident resolved and verified.")
                 await self._emit_log(
                     message="Incident resolved after successful verification loop.",
                     target="system",
@@ -572,7 +578,7 @@ class IncidentEnv:
                     action_status="success",
                 )
             else:
-                self.last_action_feedback = (
+                self._set_feedback(
                     f"{action.action_type.value} on {action.target} did not resolve the incident."
                 )
                 await self._emit_log(
@@ -636,3 +642,6 @@ class IncidentEnv:
         self.state.system_health_history.append(observation.system_health)
         self.state.system_health_history = self.state.system_health_history[-50:]
         return observation
+
+
+SREEnvironment = IncidentEnv

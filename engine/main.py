@@ -3,9 +3,14 @@ from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from agent import HuggingFaceSREAgent, HuggingFaceAgentError
-from env import IncidentEnv
-from stream import event_generator
+try:
+    from .agent import HuggingFaceSREAgent, HuggingFaceAgentError
+    from .env import IncidentEnv
+    from .stream import event_generator
+except ImportError:  # pragma: no cover - script fallback
+    from agent import HuggingFaceSREAgent, HuggingFaceAgentError
+    from env import IncidentEnv
+    from stream import event_generator
 
 try:
     from dotenv import load_dotenv

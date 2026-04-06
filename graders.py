@@ -1,7 +1,10 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from models import Action, ActionType, RewardBreakdown
+try:
+    from engine.models import Action, ActionType, RewardBreakdown
+except ImportError:  # pragma: no cover - script fallback
+    from models import Action, ActionType, RewardBreakdown
 
 
 @dataclass(frozen=True)

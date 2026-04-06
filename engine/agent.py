@@ -4,8 +4,12 @@ from typing import Any, Optional, Union
 
 import httpx
 
-from models import Action, ActionType, Observation
-from stream import log_to_stream
+try:
+    from .models import Action, ActionType, Observation
+    from .stream import log_to_stream
+except ImportError:  # pragma: no cover - script fallback
+    from models import Action, ActionType, Observation
+    from stream import log_to_stream
 
 
 HF_MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
