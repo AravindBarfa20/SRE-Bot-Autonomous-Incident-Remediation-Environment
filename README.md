@@ -1,3 +1,12 @@
+---
+title: SRE-Bot
+emoji: 🛡️
+colorFrom: blue
+colorTo: green
+sdk: docker
+tags:
+  - openenv
+---
 # SRE-Bot 🚀
 
 **A Production-Grade, Autonomous Incident Remediation Environment for Agentic SRE Evaluation.**
