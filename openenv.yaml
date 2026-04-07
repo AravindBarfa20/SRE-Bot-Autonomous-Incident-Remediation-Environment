@@ -1,0 +1,4 @@
+name: sre-bot-environment
+version: 1.0.0
+description: Autonomous Incident Remediation RL Environment for SRE evaluation
+entry_point: engine.env:SREEnvironment

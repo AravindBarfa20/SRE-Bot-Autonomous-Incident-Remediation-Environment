@@ -37,7 +37,7 @@ class HuggingFaceSREAgent:
         self,
         token: Optional[str] = None,
         model_id: str = HF_MODEL_ID,
-        temperature: float = 0.2,
+        temperature: float = 0.0,
     ):
         self.token = token or os.getenv("HF_TOKEN")
         self.model_id = model_id
@@ -68,7 +68,7 @@ class HuggingFaceSREAgent:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=60.0, max_retries=5) as client:
                 response = await client.post(
                     self.api_url,
                     headers={

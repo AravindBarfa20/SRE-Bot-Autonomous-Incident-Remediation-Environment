@@ -206,3 +206,97 @@ Weak agents chase the gateway spike.
 Strong agents trace the failure back to the database, investigate before acting, and fix the real fault.
 
 That separation is the point of the benchmark.
+
+---
+
+## 📡 Observation Space Schema
+
+The agent receives a structured observation after each step containing the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `benchmark` | `str` | Benchmark identifier (e.g., `openenv-sre-bot-v1`) |
+| `task_name` | `str` | Current task name (e.g., `auth-cache-stale-key`, `connection-pool-exhaustion`, `cascading-ghost`) |
+| `step_count` | `int` | Number of steps taken in the current episode |
+| `system_health` | `int` | Overall system health score (0–100); 100 means fully healthy |
+| `active_alerts` | `List[str]` | List of active alert strings describing ongoing incidents (empty when resolved) |
+| `logs` | `str` | Concatenated recent log entries in `[STATUS] target: message` format |
+| `metrics` | `Dict[str, NodeMetrics]` | Per-node metrics dict with `cpu`, `ram`, `latency` float values |
+| `available_actions` | `List[str]` | List of currently valid action type strings the agent may choose |
+| `last_action_feedback` | `str` | Human-readable feedback from the last action result |
+
+### NodeMetrics Schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cpu` | `float` | CPU utilization percentage (0–100) |
+| `ram` | `float` | RAM utilization percentage (0–100) |
+| `latency` | `float` | Latency in milliseconds |
+
+### Example Observation JSON
+
+```json
+{
+  "benchmark": "openenv-sre-bot-v1",
+  "task_name": "cascading-ghost",
+  "step_count": 2,
+  "system_health": 41,
+  "active_alerts": [
+    "CRITICAL: Gateway timeout burst",
+    "HIGH: API latency budget exhausted"
+  ],
+  "logs": "[WARN] api-gateway: upstream timeout threshold exceeded...\n[WARN] db-proxy: connection pool watermark exceeded...",
+  "metrics": {
+    "api-gateway": {"cpu": 97.0, "ram": 63.0, "latency": 2200.0},
+    "auth-service": {"cpu": 21.0, "ram": 41.0, "latency": 47.0},
+    "db-proxy": {"cpu": 46.0, "ram": 94.0, "latency": 1950.0}
+  },
+  "available_actions": ["check_logs", "check_metrics", "restart_service", "scale_up", "rollback_config", "resolve"],
+  "last_action_feedback": "[Step 1] Action executed: check_logs on db-proxy."
+}
+```
+
+---
+
+## 🎮 Action Space Schema
+
+The agent selects one action per step. All actions are validated against the current environment state and must conform to the following Pydantic schema:
+
+| Action Type | Valid Targets | Description |
+|-------------|---------------|-------------|
+| `check_logs` | `api-gateway`, `auth-service`, `db-proxy`, `system` | Inspect logs on the target service to gather diagnostic information. Awards triage milestone when used on the faulty target before remediation. |
+| `check_metrics` | `api-gateway`, `auth-service`, `db-proxy`, `system` | Pull detailed runtime metrics from the target service. Used during verification phase after remediation. |
+| `restart_service` | `api-gateway`, `auth-service`, `db-proxy` | Initiate a graceful restart of the target service. Destructive if applied to a healthy node (penalty applied). |
+| `scale_up` | `api-gateway`, `auth-service`, `db-proxy` | Scale up the target service by adding capacity. Medium task requires `scale_up` on `db-proxy`. |
+| `rollback_config` | `api-gateway`, `auth-service`, `db-proxy` | Roll back configuration to the last known good state on the target. Hard/Cascading Ghost task requires this on `db-proxy`. |
+| `resolve` | `system` only | Mark the incident as resolved. Only succeeds if system health is 100 and verification is complete. |
+
+### Action JSON Schema
+
+```json
+{
+  "reasoning": "short explanation of what signal matters most",
+  "action_type": "one of: check_logs, check_metrics, restart_service, scale_up, rollback_config, resolve",
+  "target": "one of: api-gateway, auth-service, db-proxy, system"
+}
+```
+
+### Determinism Notes
+
+- The environment state is fully deterministic given the same `reset()` seed and action sequence.
+- The agent default temperature is `0.0` to minimize non-deterministic output.
+- The Hugging Face client uses `max_retries=5` to handle transient 429 errors.
+
+---
+
+## 📊 Baseline Performance
+
+The following baseline scores represent expected agent performance on each difficulty tier. These will be updated with actual benchmark runs.
+
+| Difficulty | Task | Expected Score | Notes |
+|-------------|------|----------------|-------|
+| Easy | `auth-cache-stale-key` | **0.95** | Straightforward cache invalidation; agents reliably restart auth-service |
+| Medium | `connection-pool-exhaustion` | **0.75** | Requires log triage to find pool warnings; agent must execute `scale_up` on `db-proxy` |
+| Hard | `cascading-ghost` | **0.60** | Adversarial benchmark; loud API Gateway signals are misleading; agent must identify `db-proxy` config drift |
+
+> **Note**: Scores will be updated after running the full evaluation harness with the benchmark script.
