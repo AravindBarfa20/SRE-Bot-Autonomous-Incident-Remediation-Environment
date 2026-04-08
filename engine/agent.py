@@ -14,7 +14,6 @@ except ImportError:  # pragma: no cover - script fallback
 
 HF_MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
 HF_ROUTER_BASE_URL = "https://router.huggingface.co/v1"
-HF_CHAT_COMPLETIONS_URL = "{}/chat/completions".format(HF_ROUTER_BASE_URL)
 VALID_TARGETS = ["auth-service", "api-gateway", "db-proxy", "system"]
 
 
@@ -38,12 +37,14 @@ class HuggingFaceSREAgent:
         token: Optional[str] = None,
         model_id: str = HF_MODEL_ID,
         temperature: float = 0.0,
+        api_base_url: Optional[str] = None,
     ):
         self.token = token or os.getenv("HF_TOKEN")
         self.model_id = model_id
         self.temperature = temperature
-        self.base_url = HF_ROUTER_BASE_URL
-        self.api_url = HF_CHAT_COMPLETIONS_URL
+        base = api_base_url or HF_ROUTER_BASE_URL
+        self.base_url = base
+        self.api_url = f"{base}/chat/completions"
 
     def is_configured(self) -> bool:
         return bool(self.token)
