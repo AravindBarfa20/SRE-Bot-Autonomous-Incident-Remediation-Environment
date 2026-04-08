@@ -1,8 +1,3 @@
-"""
-OpenEnv-compliant inference runner for SRE-Bot.
-100% compliant: no stdout leakage, deterministic LLM, env-var config.
-"""
-
 import argparse
 import asyncio
 import json
