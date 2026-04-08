@@ -166,6 +166,36 @@ async def trigger_demo(background_tasks: BackgroundTasks):
 @app.post("/api/run-agent")
 async def run_agent(background_tasks: BackgroundTasks):
     return await trigger_demo(background_tasks)
+# --- Meta OpenEnv Automated Validation Endpoints ---
+
+@app.post("/reset")
+@app.post("/api/reset")
+async def openenv_reset():
+    """Endpoint for Meta evaluator to reset the environment."""
+    observation = await env.reset()
+    # Return observation in JSON format
+    if hasattr(observation, "model_dump"):
+        return observation.model_dump(mode="json")
+    return observation
+
+from models import Action # Make sure Action is imported at the top if not already
+
+@app.post("/step")
+@app.post("/api/step")
+async def openenv_step(action: Action):
+    """Endpoint for Meta evaluator to take a step in the environment."""
+    observation, reward, terminated, truncated, info = await env.step(action)
+    done = terminated or truncated
+    
+    obs_dict = observation.model_dump(mode="json") if hasattr(observation, "model_dump") else observation
+    
+    return {
+        "observation": obs_dict,
+        "reward": reward,
+        "terminated": terminated,
+        "truncated": truncated,
+        "info": info
+    }
 
 
 @app.get("/state")
