@@ -128,6 +128,7 @@ async def choose_action_with_retry(
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 220,
         "temperature": agent.temperature,
+        "seed": 42,
     }
 
     last_error: Optional[Exception] = None
@@ -158,12 +159,9 @@ async def choose_action_with_retry(
                 break
 
             delay = RETRY_DELAYS_SECONDS[attempt - 1]
-            logging.getLogger("openenv.eval").warning(
-                "Model call failed on attempt %s/%s with %s. Retrying in %ss.",
-                attempt,
-                max_attempts,
-                exc,
-                delay,
+            print(
+                f"Model call failed on attempt {attempt}/{max_attempts} with {exc}. Retrying in {delay}s.",
+                file=sys.stderr,
             )
             await asyncio.sleep(delay)
 
@@ -233,6 +231,13 @@ async def main() -> int:
     except Exception as exc:  # noqa: BLE001
         logging.getLogger("openenv.eval").exception("Evaluation run failed: %s", exc)
         return 1
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(asyncio.run(main()))
+return 1
 
     return 0
 

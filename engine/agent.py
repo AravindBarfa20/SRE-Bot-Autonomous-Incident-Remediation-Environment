@@ -65,6 +65,7 @@ class HuggingFaceSREAgent:
             ],
             "max_tokens": 220,
             "temperature": self.temperature,
+            "seed": 42,
         }
 
         try:
