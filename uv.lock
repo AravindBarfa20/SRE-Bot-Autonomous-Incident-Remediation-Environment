@@ -2127,6 +2127,7 @@ version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "openai" },
     { name = "openenv-core" },
     { name = "pydantic" },
     { name = "uvicorn" },
@@ -2135,6 +2136,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115.8" },
+    { name = "openai", specifier = ">=2.30.0" },
     { name = "openenv-core", specifier = ">=0.2.0" },
     { name = "pydantic", specifier = ">=2.10.6" },
     { name = "uvicorn", specifier = ">=0.34.0" },
