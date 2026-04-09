@@ -6,7 +6,8 @@ import re
 import sys
 from pathlib import Path
 from typing import List, Optional
-
+from openai import AsyncOpenAI
+import openai
 import httpx
 
 
