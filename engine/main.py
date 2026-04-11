@@ -1,30 +1,33 @@
+from __future__ import annotations
+
 import asyncio
-from fastapi import FastAPI, BackgroundTasks, Request
-from fastapi.responses import StreamingResponse
+import os
+
+from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 try:
-    from .agent import HuggingFaceSREAgent, HuggingFaceAgentError
+    from .agent import HuggingFaceAgentError, HuggingFaceSREAgent
     from .env import IncidentEnv
+    from .models import Action
     from .stream import event_generator
-except ImportError:  # pragma: no cover - script fallback
-    from agent import HuggingFaceSREAgent, HuggingFaceAgentError
+except ImportError:
+    from agent import HuggingFaceAgentError, HuggingFaceSREAgent
     from env import IncidentEnv
+    from models import Action
     from stream import event_generator
 
 try:
     from dotenv import load_dotenv
-except ImportError:  # pragma: no cover - optional dependency for local development
+except ImportError:
     def load_dotenv() -> bool:
         return False
-
 
 load_dotenv()
 
 app = FastAPI(title="SRE-Bot API")
 
-# Allow Next.js frontend to connect during local development.
-# TODO: Replace "*" with an explicit allowlist of production dashboard origins.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,16 +39,16 @@ env = IncidentEnv()
 agent = HuggingFaceSREAgent()
 
 
-async def run_agent_loop(max_steps: int = 8):
+async def _run_agent_loop(max_steps: int = 8) -> None:
     observation = await env.reset()
 
     if not agent.is_configured():
         raise HuggingFaceAgentError(
-            "Hugging Face API token is not configured. Set HF_TOKEN."
+            "Hugging Face API token not configured. Set HF_TOKEN."
         )
 
     await env._emit_log(
-        message="LLM agent loop started. Streaming reasoning and actions.",
+        message="Agent loop started.",
         target="llm-agent",
         status="INFO",
         msg_type="system",
@@ -53,60 +56,18 @@ async def run_agent_loop(max_steps: int = 8):
 
     done = False
     for step in range(1, max_steps + 1):
-        await env._emit_log(
-            message=(
-                f"[THINKING] Step {step}: health={observation.system_health}, "
-                f"alerts={observation.active_alerts}, metrics={observation.metrics}"
-            ),
-            target="llm-agent",
-            status="INFO",
-            msg_type="system",
-        )
-
         try:
             action = await agent.choose_action(observation, step)
         except HuggingFaceAgentError as exc:
-            observation, reward, terminated, truncated, info = await env._handle_invalid_action(
-                str(exc)
-            )
+            observation, _, terminated, truncated, _ = await env._handle_invalid_action(str(exc))
             done = terminated or truncated
-            await env._emit_log(
-                message=(
-                    f"[THINKING] Step {step} produced an invalid model action. "
-                    f"Reward={reward:.2f}. Error={info.get('error')}"
-                ),
-                target="llm-agent",
-                status="ERROR",
-                msg_type="system",
-            )
             if done:
                 break
             await asyncio.sleep(1)
             continue
 
-        await env._emit_log(
-            message=(
-                f"[THINKING] Chosen action: {action.action_type.value} on {action.target}. "
-                f"Rationale: {action.rationale}"
-            ),
-            target="llm-agent",
-            status="INFO",
-            msg_type="system",
-        )
-
-        observation, reward, terminated, truncated, info = await env.step(action)
+        observation, _, terminated, truncated, _ = await env.step(action)
         done = terminated or truncated
-        await env._emit_log(
-            message=(
-                f"[THINKING] Step {step} complete. Reward={reward:.2f}. "
-                f"Resolved={done}. Feedback={observation.last_action_feedback}. "
-                f"Error={info.get('error')}"
-            ),
-            target="llm-agent",
-            status="INFO",
-            msg_type="system",
-        )
-
         if done:
             break
 
@@ -114,15 +75,15 @@ async def run_agent_loop(max_steps: int = 8):
 
     if not done:
         await env._emit_log(
-            message="Max agent steps reached before resolution.",
+            message="Max steps reached without resolution.",
             target="llm-agent",
             status="WARN",
             msg_type="system",
         )
 
+
 @app.get("/api/stream-logs")
 async def stream_logs(request: Request):
-    """SSE Endpoint for Next.js to consume real-time logs."""
     last_event_id = request.headers.get("last-event-id")
     return StreamingResponse(
         event_generator(last_event_id=last_event_id),
@@ -130,71 +91,46 @@ async def stream_logs(request: Request):
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "Content-Type": "text/event-stream",
             "X-Accel-Buffering": "no",
         },
     )
 
+
 @app.post("/api/trigger-demo")
-async def trigger_demo(background_tasks: BackgroundTasks):
-    """Start a real LLM-driven remediation loop and stream its reasoning to the UI."""
-    async def run_with_logging():
-        try:
-            await run_agent_loop()
-        except HuggingFaceAgentError as exc:
-            await env._emit_log(
-                message=f"LLM agent configuration error: {exc}",
-                target="llm-agent",
-                status="ERROR",
-                msg_type="system",
-            )
-        except Exception as exc:  # noqa: BLE001
-            await env._emit_log(
-                message=f"LLM agent loop failed unexpectedly: {exc}",
-                target="llm-agent",
-                status="ERROR",
-                msg_type="system",
-            )
-
-    background_tasks.add_task(run_with_logging)
-    return {
-        "status": "LLM remediation loop started",
-        "model": agent.model_id,
-    }
-
-
 @app.post("/api/run-agent")
-async def run_agent(background_tasks: BackgroundTasks):
-    return await trigger_demo(background_tasks)
-# --- Meta OpenEnv Automated Validation Endpoints ---
+async def trigger_demo(background_tasks: BackgroundTasks):
+    async def _run() -> None:
+        try:
+            await _run_agent_loop()
+        except Exception as exc:
+            await env._emit_log(
+                message=f"Agent loop error: {exc}",
+                target="llm-agent",
+                status="ERROR",
+                msg_type="system",
+            )
+
+    background_tasks.add_task(_run)
+    return {"status": "started", "model": agent.model_id}
+
 
 @app.post("/reset")
 @app.post("/api/reset")
 async def openenv_reset():
-    """Endpoint for Meta evaluator to reset the environment."""
     observation = await env.reset()
-    # Return observation in JSON format
-    if hasattr(observation, "model_dump"):
-        return observation.model_dump(mode="json")
-    return observation
+    return observation.model_dump(mode="json")
 
-from models import Action # Make sure Action is imported at the top if not already
 
 @app.post("/step")
 @app.post("/api/step")
 async def openenv_step(action: Action):
-    """Endpoint for Meta evaluator to take a step in the environment."""
     observation, reward, terminated, truncated, info = await env.step(action)
-    done = terminated or truncated
-    
-    obs_dict = observation.model_dump(mode="json") if hasattr(observation, "model_dump") else observation
-    
     return {
-        "observation": obs_dict,
+        "observation": observation.model_dump(mode="json"),
         "reward": reward,
         "terminated": terminated,
         "truncated": truncated,
-        "info": info
+        "info": info,
     }
 
 
@@ -202,33 +138,3 @@ async def openenv_step(action: Action):
 @app.get("/api/state")
 async def get_state():
     return env.get_state_snapshot().model_dump(mode="json")
-# --- Meta OpenEnv Automated Validation Endpoints ---
-
-@app.post("/reset")
-@app.post("/api/reset")
-async def openenv_reset():
-    """Endpoint for Meta evaluator to reset the environment."""
-    observation = await env.reset()
-    # Return observation in JSON format
-    if hasattr(observation, "model_dump"):
-        return observation.model_dump(mode="json")
-    return observation
-
-from models import Action # Make sure Action is imported at the top if not already
-
-@app.post("/step")
-@app.post("/api/step")
-async def openenv_step(action: Action):
-    """Endpoint for Meta evaluator to take a step in the environment."""
-    observation, reward, terminated, truncated, info = await env.step(action)
-    done = terminated or truncated
-    
-    obs_dict = observation.model_dump(mode="json") if hasattr(observation, "model_dump") else observation
-    
-    return {
-        "observation": obs_dict,
-        "reward": reward,
-        "terminated": terminated,
-        "truncated": truncated,
-        "info": info
-    }

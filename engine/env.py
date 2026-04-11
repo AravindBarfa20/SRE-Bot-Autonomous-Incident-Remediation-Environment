@@ -400,7 +400,7 @@ class IncidentEnv:
         await self._broadcast_state_snapshot()
         return (
             observation,
-            round(breakdown.reward, 2),
+            round(breakdown.reward, 3),
             False,
             False,
             {"error": "Invalid action or target"},
@@ -614,7 +614,7 @@ class IncidentEnv:
             }
             return (
                 observation,
-                round(breakdown.reward, 2),
+                round(breakdown.reward, 3),
                 self.resolved or premature_resolve,
                 False,
                 info,
